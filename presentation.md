@@ -4,16 +4,7 @@ Zero to Node: Node.js in Production
 
 * * * * *
 
-## Goal
-### Describe how we did a particular project in Node.
-
-* Hopefully helpful to others who want to work with Node.
-
-* * * * *
-
 ## The Problem
-
-* Teaching a language means teaching pronunciation.
 
 * Users want to learn how to pronounce arbitrary text.
 
@@ -27,98 +18,45 @@ Zero to Node: Node.js in Production
 
 ### A node.js app.
 
-* Ryan and Chris assert: **Node.js can do this**.
-
-<img src='deck/img/nodejs.png' style='width: 35%'>
-
-* Me: OK.
-
 * Thus was born **cicero**.
 
-* * * * *
-
-## Yikes!
-
-* Lots of users!
-* New stack and framework!
-* Async!
-
-* * * * *
-
-## What's this app really doing?
+### What's this app really doing?
 
 * Taking in a string and:
 
     * serving audio from cache, or
-    * generating audio, serving to user, and saving in cache
+    * generating audio, serving it, and saving it in cache.
 
-* In other words, **slinging data**. Node can do that really well.
+* Needs to be quick and stable.
 
-* It needs to be quick and stable.
-
-* It needs to serve ~500 requests/minute.
+* Needs to serve ~500 requests/minute.
 
 * * * * *
 
 ## Getting started
 
-Install is easy. Check nodejs.org for instructions.
+* nodejs.org has install instructions.
 
-* On OS X, using Homebrew:
+* Helpful: NVM (Node version manager).
 
-<pre>$ brew install node</pre>
+* Third-party packages via Node package manager (NPM).
 
-Recommended: Install NVM (Node version manager).
-
-* Allows multiple versions of Node to be installed at once.
-* Useful for trying out new versions (which are released often).
-
-* * * * *
-
-## Dependencies
-
-* Node has **lots** of third-party packages.
-
-* Available via Node package manager (NPM).
-
-* First, specify dependencies in `package.json`:
-
+* Specify dependencies in `package.json`. NPM does the rest.
 <pre><code class="javascript">"dependencies": {
   "config": "0.4.15",
   "express": "3.x",
-  "underscore": "1.3.3",
-  "deep-extend": "0.2.2",
-  "validator": "0.4.10",
   "winston": "0.6.2"
 },
 "devDependencies": {
   "coffee-script": "1.3.3",
-  "jshint": "0.7.1",
-  "coffeelint": "0.4.0"
 }
 </code></pre>
-
-* Then NPM will install into `node_modules`:
-
-<pre><code>$ npm install</code></pre>
-
-* * * * *
-
-## Modules
-
-`require` allows importing third-party packages into our code.
-
-`require`'ing is very simple:
-
-    express = require "express"
-
-Modules are just js files.
-
-    utils = require "./common/utils"
 
 * * * * *
 
 ## Dev Environment
+
+* Grunt tasks: watch, test, build, server.
 
 * Coffeescript: a must (for me).
 
@@ -133,35 +71,6 @@ var obj = {                 obj =
 };
 </code>
 </pre>
-
-* Grunt: watch, test, server.
-
-* REPL? Eh.
-
-* * * * *
-
-## Configuration
-
-`node-config` provides per-environment config.
-
-Sample config:
-
-    module.exports =
-      app:
-        port: 8004
-      log:
-        level: "debug"
-      tts:
-        input:
-          maxChars: 200
-
-Place config files In `config` sub-directory:
-
-* `default.js`
-* `development.js`
-* `production.js`
-
-`node-config` chooses based on `NODE_ENV` environment variable.
 
 * * * * *
 
@@ -186,7 +95,7 @@ middle = (req, res, next) ->
   return res.send 200, responseData if allDone
   # Or can move on to next middleware:
   next()
-  
+
 app.use middle
 </code></pre>
 
@@ -197,13 +106,13 @@ app.use middle
 Really up to you. Here's our project layout:
 
     /cicero
-       |-config    
+       |-config
        |-docs
        |-lib               (<--- compiled JS)
        |  |--index.js
        |  |--tts.js
        |-node_modules ...
-       |-src               (<--- Coffee-script)
+       |-src               (<--- CoffeeScript)
           |--index.coffee
           |--tts.coffee
 
@@ -212,28 +121,7 @@ Really up to you. Here's our project layout:
 
 ## Structure and Decomposition
 
-**`index.coffee`**
-
-* docstring
-* logger setup
-* app creation and config
-* routes
-
-* * * * *
-
-## Structure and Decomposition
-
-**`tts.coffee`**
-
-* `TtsArgs`
-* `TtsExec`
-* `TtsCache`
-
-* * * * *
-
-## Structure and Decomposition
-
-`tts.coffee` exposes middleware functions with signature `(req, res,
+`tts.coffee` exposes middleware functions: `(req, res,
 next)`:
 
 <pre><code class="coffeescript">module.exports =
@@ -256,9 +144,7 @@ app.get "/audio", middle
 * I started cicero doing filesystem operations with sync methods like
   `fs.openSync`.
 
-* But why is that a problem?
-
-* Node is single-threaded.
+* That's a problem: Node is single-threaded.
 
 * Anything that blocks can halt the entire process.
 
@@ -269,12 +155,11 @@ app.get "/audio", middle
 First async paradigm.
 
 <pre><code class="coffeescript">fs.open path, 'r', (err, file) ->
-  # In callback function.
-  
+  # In callback function:
   # Short-circuit and handle error if err is non-null:
   return handleError err if err
 
-  # Otherwise, everything went ok, and we can do 
+  # Otherwise, all is good, and we can do
   # something with file now that it's ready...
 </code></pre>
 * * * * *
@@ -284,19 +169,19 @@ First async paradigm.
 Second async paradigam.
 
     # Create our process object.
-    ttsProcess = spawn 'tts_command', args, options
-
-    # Listen for error event.
-    stderr = ""
-    ttsProcess.stderr.on "data", (data) ->
-      # Accumulate data from stderr.
-      stderr += data
+    ttsProcess = spawn 'tts', args, options
 
     # Listen for exit event.
     ttsProcess.on "exit", (code) ->
       # Check errors, exit.
       if stderr or code isnt 0
         return new Error(stderr ? "TTS failed")
+
+    # Listen for error event.
+    stderr = ""
+    ttsProcess.stderr.on "data", (data) ->
+      # Accumulate data from stderr.
+      stderr += data
 
 * * * * *
 
@@ -310,8 +195,8 @@ Second async paradigam.
 
 ### Why use streams?
 
-* Avoid 'procrastination', i.e., buffering data in memory. Send it as
-available/ready from the OS. Smooths out CPU and network load.
+* Avoid buffering data in memory. Send it as available/ready from the OS.
+Smooths out CPU and network load.
 * Easy to reason about.
 
 * * * * *
@@ -351,11 +236,9 @@ Gain visibility into what your app is doing.
   "date": "2012-10-28T15:17:02.513Z",
   "level": "info",
   "env": "production",
-  "type": "server",
   "addr": "0.0.0.0",
   "port": 2003,
   "vers": "v0.8.9",
-  "deploy": "cicero",
   "message": "Server started on port 2003."
 }
 </code></pre>
@@ -394,25 +277,6 @@ Gain visibility into what your app is doing.
 * Newness/rapid development.
 * DIY / FIOY (figure it out yourself).
 * Minimalist aesthetic sometimes extends to docs.
-
-* * * * *
-
-## Links
-
-#### Docs
-* Node docs: http://nodejs.org/api (Make sure to get right version, Google is often behind!)
-* Express docs: http://expressjs.com
-
-#### Community
-* Nodejitsu: http://docs.nodejitsu.com
-* How to Node: http://howtonode.org
-
-#### Coffee-script
-* http://coffeescript.org
-
-#### Chef
-* nodejs cookbook: http://community.opscode.com/cookbooks/nodejs
-* node app cookbook: http://community.opscode.com/cookbooks/node
 
 * * * * *
 

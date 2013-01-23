@@ -3,8 +3,10 @@
 * Hi, thanks for coming.
 * I'm William Bert, a software engineer at SpanishDict.
 * My talk is titled Zero to Node. It's a case study of deploying node.js in
-  production based on a project I worked on in August, my first month here.
-* This is the lightning version.
+  production based on a project I worked on in August, my first month at
+  SpanishDict.
+* This is the lightning version--will skim some stuff that will be addressed in
+  subsequent talks.
 
 ## Slide 2 - Problem
 
@@ -16,13 +18,12 @@ words pronounced correctly.
 * We have a text to speech (TTS) product that actually does a pretty good job of
 pronouncing arbitrary Spanish and English text (play Spanish sample).
 * The TTS application is enterprise software that only runs on the command line,
-but our old PHP app is not working well and not worth repairing.
+but our old PHP app was not working well and not worth repairing.
 
-## Slide 3 - The Solution/Yikes/What's it really doing
+## Slide 3 - The Solution/What's it really doing
 
 * The solution is (you may have guessed) a node app.
 * Thus is born Cicero, my first foray into node.
-
 * What's this app really doing?
 * Taking in a string and
 
@@ -30,17 +31,14 @@ but our old PHP app is not working well and not worth repairing.
     * generating audio, serving to user, and caching
 
 * In other words, **slinging data**. Node can do that really well.
-* We need to serve the audio quickly (very quickly) and efficiently.
 * This isn't a core service, but a nice add-on.
 * We just want to forget about it. We want stability, relatively low resources,
 simplicity so easy to maintain.
 * We'll serve ~500 requests/minute.
-* So now the problem is well understood.
 
 ## Slide 4 - Getting started/install/dependencies
 
-* Install is easy on any platform. Here's how to do it on OS X with Homebrew
-  (see slide).
+* Install is easy. Follow directions on nodejs.org.
 * We installed `nvm`, node version manager, which allows you to have
   multiple node versions installed at once. This is useful because node is
   updated all the time.
@@ -54,6 +52,7 @@ simplicity so easy to maintain.
   boilerplate).
 * Do `npm install`.
 * Npm installs everything and their dependencies into `node_modules`.
+* Another presenter will talk more about NPM.
 
 ## Slide 5 - Dev Env
 
@@ -106,6 +105,8 @@ simplicity so easy to maintain.
 * grunt has a build task that compiles from src/server into lib. Coffee goes in,
   Javascript comes out. `lib` directory is a standard place for app code.
 
+<br><br><br><br>
+
 ## Slide 8 - S and D - Connect app routes with app logic via middleware
 
 * So we're going to connect our app skeleton in index with our app logic in
@@ -143,6 +144,8 @@ halt everything in the entire Node process, or if not halt, then slow down.
 * The flow is fairly straightfoward: start this operation, keep going with
   whatever comes next, but when this operation is done, execute this code.
 
+<br><br><br><br><br><br><br><br><br><br><br><br><br>
+
 ## Slide 11 - Events
 
 * Events are the next async paradigm I encountered.
@@ -163,6 +166,8 @@ halt everything in the entire Node process, or if not halt, then slow down.
 
 ## Slide 12 - Streams
 
+* I'm actually going to skip over streams in the interest of time because
+  another presenter is going to discuss them.
 * So I got comfortable with callbacks first. And events. Then Ryan says to
   switch to streams.
 * Streams are another async paradigm. Powerful abstraction for IO.
@@ -183,7 +188,7 @@ OS. Smooths out CPU and network load. Users see faster response.
 * Ideal would be to stream directly from the TTS application without touching the
 filesystem, but the application is picky and uncooperative.
 
-<br><br>
+<br><br><br><br><br><br><br><br><br>
 
 ## Slide 14 - Logging
 
@@ -227,6 +232,8 @@ filesystem, but the application is picky and uncooperative.
 * It simple scans output from logging, and produces realtime charts like this.
 * We configure alerts so that if the number of requests drops below a threshold,
   or the amount of memory used goes above a threshold, we get emails or texts.
+
+<br><br><br><br><br><br><br>
 
 ## Slide 17 - Summing up
 

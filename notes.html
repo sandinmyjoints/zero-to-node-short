@@ -1,0 +1,278 @@
+
+    <html>
+    <head>
+    <meta http-equiv="content-type" content="text/html; charset=UTF-8">
+    <link href="/Users/william/scm/markdown-css-themes/markdown-print.css" rel="stylesheet"></link>
+    </head>
+    <body>
+    <h2>Slide 1 - Title</h2>
+<ul>
+<li>Hi, thanks for coming.</li>
+<li>I'm William Bert, a software engineer at SpanishDict.</li>
+<li>My talk is titled Zero to Node. It's a case study of deploying node.js in
+  production based on a project I worked on in August, my first month at
+  SpanishDict.</li>
+<li>This is the lightning version--will skim some stuff that will be addressed in
+  subsequent talks.</li>
+</ul>
+<h2>Slide 2 - Problem</h2>
+<ul>
+<li>SpanishDict.com is an English-Spanish language learning website. Part of
+teaching language is teaching pronunciation. Pronunciation is taught by hearing
+words pronounced correctly.</li>
+<li>Users are arbitrary--they want to hear how to pronounce whatever words they
+  want to learn!</li>
+<li>We have a text to speech (TTS) product that actually does a pretty good job of
+pronouncing arbitrary Spanish and English text (play Spanish sample).</li>
+<li>The TTS application is enterprise software that only runs on the command line,
+but our old PHP app was not working well and not worth repairing.</li>
+</ul>
+<h2>Slide 3 - The Solution/What's it really doing</h2>
+<ul>
+<li>The solution is (you may have guessed) a node app.</li>
+<li>Thus is born Cicero, my first foray into node.</li>
+<li>What's this app really doing?</li>
+<li>
+<p>Taking in a string and</p>
+<ul>
+<li>serving audio from cache, or</li>
+<li>generating audio, serving to user, and caching</li>
+</ul>
+</li>
+<li>
+<p>In other words, <strong>slinging data</strong>. Node can do that really well.</p>
+</li>
+<li>This isn't a core service, but a nice add-on.</li>
+<li>We just want to forget about it. We want stability, relatively low resources,
+simplicity so easy to maintain.</li>
+<li>We'll serve ~500 requests/minute.</li>
+</ul>
+<h2>Slide 4 - Getting started/install/dependencies</h2>
+<ul>
+<li>Install is easy. Follow directions on nodejs.org.</li>
+<li>We installed <code>nvm</code>, node version manager, which allows you to have
+  multiple node versions installed at once. This is useful because node is
+  updated all the time.</li>
+<li>
+<p>This way, you can try out new versions and switch when ready. Different apps
+  can use different versions.</p>
+</li>
+<li>
+<p>Node has <strong>lots</strong> of third-party packages.</p>
+</li>
+<li>We used Node package manager (npm) to install some packages out of the gate
+  to get the most out of node. We'll talk about what they do in a minute.</li>
+<li>Put a list of packages and versions in <code>package.json</code> (see docs for
+  boilerplate).</li>
+<li>Do <code>npm install</code>.</li>
+<li>Npm installs everything and their dependencies into <code>node_modules</code>.</li>
+<li>Another presenter will talk more about NPM.</li>
+</ul>
+<h2>Slide 5 - Dev Env</h2>
+<ul>
+<li>I'll briefly describe my dev environment.</li>
+<li>I use a command line dev tool called grunt. Very useful for dev tasks that
+  come up over and over: watch, test, server. Kind of like Rake in Ruby.</li>
+<li>Coffescript is "a little language that compiles to Javascript." You write
+  Coffee-script but you run JS.</li>
+<li>Coffescript is really "the best parts of Javascript". Protects you from
+  tripping on some gotchas like global variables, semicolon insertion, weird
+  type coercion.</li>
+<li>It passes JSLint static analysis without warnings, works in all JS runtimes,</li>
+<li>Coffescript also looks better than straight JS: less verbose, more readable,
+  uses significant whitespace. It reminds me of Python.</li>
+<li>Quick CS explanation (see slide)</li>
+<li>My examples are in CS. Ask if anything is unclear about it.</li>
+</ul>
+<h2>Slide 6 - Express and Connect</h2>
+<ul>
+<li>Express is a node HTTP application framework built on Connect, which is a
+  middleware framework.</li>
+<li>They're so much part of my node experience that I almost forget they are their
+  own things because they provide essentials: an HTTP application, and its
+  routes and middleware. (see slide)</li>
+<li>Routes are where requests to a url go. Typically they end in sending
+  something back to the user via response.</li>
+<li>Middleware allows common functionality to be shared among routes. So we can
+  pass all our requests through a chain of middleware.</li>
+<li>Middleware are just functions that take req, res, do something, and call the
+  next middleware function.</li>
+<li>Example: logging. Any request we get to any route, we want to log it, so we
+  pass to log middleware first, it logs the request, then passes to next.</li>
+<li>Now, sometimes you might want to short-circuit in middleware and send something back to
+  the user right then and there. You can do that.</li>
+<li>Exmaple: if there was a request to '/audio' for some text, and in the cache-lookup
+  middleware we find the audio for that text, then we can just send that audio
+  data without going any further.</li>
+<li>We can send some routes through some middleware, like auth, but others will go
+  through different middleware.</li>
+<li>Seemingly simple, extremely flexible.</li>
+</ul>
+<h2>Slide 7 - Structure and Decomposition - Project layout</h2>
+<ul>
+<li>Node is ripe for structuring. It's entirely up to you, unlike Django or RoR.</li>
+<li>Here's Cicero's directory structure.</li>
+<li>We have this src directory at the bottom that holds Coffee-script.</li>
+<li>index.coffee and tts.coffee are the main source code files.</li>
+<li>index.coffee has app config, logger setup, top level routes.</li>
+<li>tts.coffee has app logic: turn params into args, exec, cache, respons</li>
+<li>grunt has a build task that compiles from src/server into lib. Coffee goes in,
+  Javascript comes out. <code>lib</code> directory is a standard place for app code.</li>
+</ul>
+<p><br><br><br><br></p>
+<h2>Slide 8 - S and D - Connect app routes with app logic via middleware</h2>
+<ul>
+<li>So we're going to connect our app skeleton in index with our app logic in
+  tts.coffee using middleware.</li>
+<li>TTS exposes several middleware functions (which are just functions that take <code>(req, res,
+  next)</code> and do something, then call next or return a response).</li>
+<li>parseArgs, searchCache, exec.</li>
+<li>Then we attach logging middleware and our TTS middleware to the /audio route.</li>
+<li>So every request goes through this chain:</li>
+<li>log request</li>
+<li>process args</li>
+<li>search cache, return if found</li>
+<li>exec tts command line application if not in cache, serve to user and store
+    in cache</li>
+</ul>
+<h2>Slide 9 - Async</h2>
+<ul>
+<li>So now that we've laid out the app structure, I'm going to discuss one of the
+  techniques used within the app: async control flow.</li>
+<li>I looked at some early commits and found sync methods.</li>
+<li>Sync is a problem because Node is single-threaded, so one blocking call can
+halt everything in the entire Node process, or if not halt, then slow down.</li>
+<li>Node is designed for async, everything in the std lib and the ecosystem
+  supports async, and async works well in practice for web apps, so I wanted to
+  be sure to use it.</li>
+<li>Async: I understood it in theory, but had limited exposure in practice.</li>
+</ul>
+<h2>Slide 10 - Callbacks</h2>
+<ul>
+<li>First async paradigm: callback functions.</li>
+<li>They are functions that are called once something is ready. In other words,
+  they are deferred execution.</li>
+<li>They are kind of the building blocks of Node async.</li>
+<li>This example shows how to open a file.</li>
+<li>The flow is fairly straightfoward: start this operation, keep going with
+  whatever comes next, but when this operation is done, execute this code.</li>
+</ul>
+<p><br><br><br><br><br><br><br><br><br><br><br><br><br></p>
+<h2>Slide 11 - Events</h2>
+<ul>
+<li>Events are the next async paradigm I encountered.</li>
+<li>Events are like arbitrary callbacks--an event emitter object can emit them
+  whenever some condition occurs, like receiving data, or encountering an error.</li>
+<li>(see slide) We create the process object, init stderr, and register the event
+  handlers, all synchronously within one 'tick'.</li>
+<li>A 'tick' is one trip around the event loop. Node is continuously running this
+  event loop, and on each trip around event loop: node asks, is it time to fire
+  this callback? execute this event handler? etc.</li>
+<li>So on subsequent ticks, if our process has triggered 'exit' or 'data' events,
+  the cbs execute (synchronously inside each)</li>
+<li>Using this event loop/async event paradigm mean node effectively never blocks;
+  it only executes code when the condition that code is supposed to handle has
+  occurred. This is especially useful for I/O bound applications like HTTP
+  servers: we don't block for network input or filesystem operations while
+  complete; they can run and node is free to keep serving requests.</li>
+</ul>
+<h2>Slide 12 - Streams</h2>
+<ul>
+<li>I'm actually going to skip over streams in the interest of time because
+  another presenter is going to discuss them.</li>
+<li>So I got comfortable with callbacks first. And events. Then Ryan says to
+  switch to streams.</li>
+<li>Streams are another async paradigm. Powerful abstraction for IO.</li>
+<li>Streams are like pipes in unix. Send output of something directly as input to
+  something else.</li>
+<li>Can be readable, writeable, both. Can pipe readable into writeable.</li>
+<li>Why use streams?</li>
+<li>Avoid buffering data in memory. Send it as available/ready from the
+OS. Smooths out CPU and network load. Users see faster response.</li>
+<li>Easy to reason about.</li>
+</ul>
+<h2>Slide 13 - Stream example</h2>
+<ul>
+<li>Here's an example use of streams to return audio data (see slide).</li>
+<li>Note that one readable stream is piping to two totally separate writeable
+  streams simultaneously. Node and the OS handle all that for us.</li>
+<li>Listen for events. Handle end and error events, particularly.</li>
+<li>Ideal would be to stream directly from the TTS application without touching the
+filesystem, but the application is picky and uncooperative.</li>
+</ul>
+<p><br><br><br><br><br><br><br><br><br></p>
+<h2>Slide 14 - Logging</h2>
+<ul>
+<li>Now that we have our app working, let's start thinking about operations and
+  maintenance.</li>
+<li>Logging allows you visibility into what your app is doing.</li>
+<li>This is very important for production deployment so you know the app is
+  working correctly, or if it breaks, you know what is going wrong.</li>
+<li>We use a library called Winston for logging.</li>
+<li>Configure multiple transports:</li>
+<li>log to console in dev.</li>
+<li>log to filesystem and a service (e.g., Loggly) in production.</li>
+<li>It outputs JSON instead of a big string blob.</li>
+<li>We can data mine these logs later for diagnosing any problems, or also for
+  business value, say, what kinds of words or phrases do people tend to want to
+  pronounce?</li>
+</ul>
+<h2>Slide 15 - Provisioning and Deployment</h2>
+<ul>
+<li>There are many ways you could do this. It's a big topic.</li>
+<li>We use Chef for provisioning and deployment. Chef is "an open-source systems
+  integration framework built specifically for automating the cloud."</li>
+<li>That means we can control our servers through code.</li>
+<li>We write cookbooks that describe how to configure machines, then Chef executes
+  those cookbooks and actually configures machines.</li>
+<li>AWS is our IAAS provider. They give us raw machines to use. Chef is how we
+  control them.</li>
+<li>A lot of kinds of Chef cookbooks are available online. You can use the off the
+  shelf or customize them fairly easily.</li>
+<li>Ryan wrote our general node webapp cookbook.</li>
+<li>I wrote a tts webapp cookbook which extends that for cicero.</li>
+<li>Once the cookbook is written, we can use Chef to start, stop, and deploy our
+  app with one or two commands. Quick and convenient.</li>
+</ul>
+<h2>Slide 16 - Monitoring</h2>
+<ul>
+<li>In production, you can't read the voluminous logs, so monitoring aggregates
+  the logs and gives even better visibility into your app's operation.</li>
+<li>Again, there are many ways to do this.</li>
+<li>We use a service called Scout.</li>
+<li>It simple scans output from logging, and produces realtime charts like this.</li>
+<li>We configure alerts so that if the number of requests drops below a threshold,
+  or the amount of memory used goes above a threshold, we get emails or texts.</li>
+</ul>
+<p><br><br><br><br><br><br><br></p>
+<h2>Slide 17 - Summing up</h2>
+<h3>Results</h3>
+<ul>
+<li>http://audio.spanishdict.com/audio?lang=en&amp;speed=25&amp;text=java+script works</li>
+<li>Cicero meets our needs</li>
+<li>Serves audio quickly and efficiently, without fuss</li>
+</ul>
+<h3>Challenges</h3>
+<ul>
+<li>Async means wrapping your head around a new kind of flow control if you're
+  used to sync. Debug is a little messier, but tolerable.</li>
+<li>Newness and rapid development mean best practices aren't always well known,
+  and change frequently. Need to keep up with the community.</li>
+<li>Seems to be a DIY/FIOY attitude, which you may like or not, depending on your
+  temperment, your task, and your deadlines.</li>
+<li>Minimalism of node/express sometimes extends to docs. Aesthetically pleasing,
+  but frustrating when you're trying to understand something. Always good to
+  look at source.</li>
+</ul>
+<h2>Slide 18 - Thanks and Questions</h2>
+<ul>
+<li>So hopefully this presentation has explained, one way at least, to go from
+  zero to node.</li>
+<li>Thanks for listening!</li>
+<li>I'll put a link to the slides online at my website soon.</li>
+<li>Quick note: If this sounded interesting, SpanishDict is hiring. Talk to me,
+  Chris, or Ryan.</li>
+<li>Questions?</li>
+</ul>
+</body>
+</html>
